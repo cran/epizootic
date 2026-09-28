@@ -1,14 +1,20 @@
-#' Simulate a *Mycoplasma gallisepticum* Outbreak in the Breeding Season
+#' Simulate a SIR Outbreak in the Breeding Season
 #'
-#' Simulate a *Mycoplasma gallisepticum* outbreak during the breeding season
-#' day-by-day in a population of house finches (*Haemorhous mexicanus*). Uses a
-#' SIRI model (Susceptible-Infected 1- Recovered-Infected 2+) and includes
-#' demographic stochasticity in fecundity, mortality, and infection.
+#' Simulate a disease outbreak day-by-day during the breeding season in a
+#' population with two life stages (juvenile and adult). Uses an SIR model
+#' (Susceptible-Infected-Recovered), in which recovery confers permanent
+#' immunity, and includes demographic stochasticity in fecundity, mortality,
+#' and infection. Only adults reproduce.
+#'
+#' This is the default season function for the most common modeling scenario
+#' in `epizootic`: two life stages, three disease compartments, and adult
+#' fecundity in the breeding season. Segments are ordered compartment by stage,
+#' i.e. susceptible juvenile, susceptible adult, infected juvenile, infected
+#' adult, recovered juvenile, recovered adult.
 #'
 #' The function can also handle the case in which there are no infected
-#' individuals. The principal difference between this function and the one for
-#' simulating an outbreak in the non-breeding season is that this one includes
-#' fecundity.
+#' individuals. The principal difference between this function and
+#' [sir_model_winter()] is that this one includes fecundity.
 #'
 #' @importFrom stats rbinom rpois
 #' @import dplyr
@@ -18,9 +24,10 @@
 #'     \item{\code{replicates}}{Number of replicate simulation runs.}
 #'     \item{\code{time_steps}}{Number of simulation time steps.}
 #'     \item{\code{populations}}{Number of populations.}
-#'     \item{\code{stages}}{Number of life cycle stages.}
-#'     \item{\code{compartments}}{Number of disease compartments (e.g., 3 for a
-#'     SIR model).}
+#'     \item{\code{stages}}{Number of life cycle stages. Must be 2 (juvenile,
+#'     adult).}
+#'     \item{\code{compartments}}{Number of disease compartments. Must be 3
+#'     (susceptible, infected, recovered).}
 #'     \item{\code{abundance_threshold}}{A quasi-extinction threshold at
 #'     which a population becomes extinct.}
 #'     \item{\code{mortality}}{A vector of mortality rates, one for each
@@ -36,7 +43,7 @@
 #'     \item{\code{transmission}}{A vector of transmission rates, one for each
 #'     combination of stages and compartment for which transmission applies (see
 #'     \code{transmission_mask} below.}
-#'     \item{\code{transmission_unit}}{A vector indicating whether mortality
+#'     \item{\code{transmission_unit}}{A vector indicating whether transmission
 #'     rates are daily or seasonal. 1 indicates seasonal, 0 indicates daily.}
 #'     \item{\code{transmission_mask}}{A vector indicating which stages and
 #'     compartments are subject to transmission (i.e., classes susceptible to
@@ -44,7 +51,7 @@
 #'     \item{\code{recovery}}{A vector of recovery rates, one for each
 #'     combination of stages and compartment for which recovery applies (see
 #'     \code{recovery_mask} below.)}
-#'     \item{\code{recovery_unit}}{A vector indicating whether mortality rates
+#'     \item{\code{recovery_unit}}{A vector indicating whether recovery rates
 #'     are daily or seasonal. 1 indicates seasonal, 0 indicates daily.}
 #'     \item{\code{recovery_mask}}{A vector indicating which compartments are
 #'     subject to recovery (i.e., infected classes that can recover.)}
@@ -66,10 +73,11 @@
 #' @return An abundance matrix with `populations` columns and
 #' `stages*compartments` rows, updated from the `segment_abundance` input in
 #' `inputs` according to demography and disease dynamics.
+#' @seealso [sir_model_winter()], [aspatial_sir()]
 #' @export
 
-siri_model_summer <- function(inputs) {
-  inputs <- check_aspatial_siri_inputs(inputs)
+sir_model_summer <- function(inputs) {
+  inputs <- check_aspatial_sir_inputs(inputs)
   list2env(inputs, environment())
   active_pops <- length(occupied_indices)
 
@@ -120,7 +128,7 @@ siri_model_summer <- function(inputs) {
                               abundance_threshold = abundance_threshold,
                               carrying_capacity = carrying_capacity,
                               season_length = season_length,
-                              season = "breeding"), aspatial_siri)
+                              season = "breeding"), aspatial_sir)
 
   # Assign populations to occupied indices in segment_abundance
   for(i in seq_along(occupied_indices)) {
@@ -130,25 +138,32 @@ siri_model_summer <- function(inputs) {
   return(segment_abundance)
 }
 
-#' Simulate a *Mycoplasma gallisepticum* Outbreak in the Non-Breeding Season
+#' Simulate a SIR Outbreak in the Non-Breeding Season
 #'
-#' Simulate a *Mycoplasma gallisepticum* outbreak during the non-breeding season day-by-day in a
-#' population of house finches (*Haemorhous mexicanus*). Uses a SIRI model (Susceptible-Infected 1-
-#' Recovered-Infected 2+) and includes demographic stochasticity in fecundity, mortality, and
-#' infection.
+#' Simulate a disease outbreak day-by-day during the non-breeding season in a
+#' population with two life stages (juvenile and adult). Uses an SIR model
+#' (Susceptible-Infected-Recovered), in which recovery confers permanent
+#' immunity, and includes demographic stochasticity in mortality and infection.
 #'
-#' The function can also handle the case in which there are no infected individuals. The principal
-#' difference between this function and the one for simulating an outbreak in the breeding season
-#' is that this one does not include fecundity.
+#' This is the default non-breeding season function for the most common
+#' modeling scenario in `epizootic`: two life stages, three disease
+#' compartments, and adult fecundity in the breeding season. Segments are
+#' ordered compartment by stage, i.e. susceptible juvenile, susceptible adult,
+#' infected juvenile, infected adult, recovered juvenile, recovered adult.
+#'
+#' The function can also handle the case in which there are no infected
+#' individuals. The principal difference between this function and
+#' [sir_model_summer()] is that this one does not include fecundity.
 #'
 #' @param inputs A nested list with named elements:
 #'   \describe{
 #'     \item{\code{replicates}}{Number of replicate simulation runs.}
 #'     \item{\code{time_steps}}{Number of simulation time steps.}
 #'     \item{\code{populations}}{Number of populations.}
-#'     \item{\code{stages}}{Number of life cycle stages.}
-#'     \item{\code{compartments}}{Number of disease compartments (e.g., 3 for a
-#'     SIR model).}
+#'     \item{\code{stages}}{Number of life cycle stages. Must be 2 (juvenile,
+#'     adult).}
+#'     \item{\code{compartments}}{Number of disease compartments. Must be 3
+#'     (susceptible, infected, recovered).}
 #'     \item{\code{abundance_threshold}}{A quasi-extinction threshold below
 #'     which a population becomes extinct.}
 #'     \item{\code{mortality}}{A vector of mortality rates, one for each
@@ -164,7 +179,7 @@ siri_model_summer <- function(inputs) {
 #'     \item{\code{transmission}}{A vector of transmission rates, one for each
 #'     combination of stages and compartment for which transmission applies (see
 #'     \code{transmission_mask} below.}
-#'     \item{\code{transmission_unit}}{A vector indicating whether mortality
+#'     \item{\code{transmission_unit}}{A vector indicating whether transmission
 #'     rates are daily or seasonal. 1 indicates seasonal, 0 indicates daily.}
 #'     \item{\code{transmission_mask}}{A vector indicating which stages and
 #'     compartments are subject to transmission (i.e., classes susceptible to
@@ -172,7 +187,7 @@ siri_model_summer <- function(inputs) {
 #'     \item{\code{recovery}}{A vector of recovery rates, one for each
 #'     combination of stages and compartment for which recovery applies (see
 #'     \code{recovery_mask} below.)}
-#'     \item{\code{recovery_unit}}{A vector indicating whether mortality rates
+#'     \item{\code{recovery_unit}}{A vector indicating whether recovery rates
 #'     are daily or seasonal. 1 indicates seasonal, 0 indicates daily.}
 #'     \item{\code{recovery_mask}}{A vector indicating which compartments are
 #'     subject to recovery (i.e., infected classes that can recover.)}
@@ -194,10 +209,11 @@ siri_model_summer <- function(inputs) {
 #' @return An abundance matrix with `populations` columns and
 #' `stages*compartments` rows, updated from the `segment_abundance` input in
 #' `inputs` according to demography and disease dynamics.
+#' @seealso [sir_model_summer()], [aspatial_sir()]
 #' @export
 
-siri_model_winter <- function(inputs) {
-  inputs <- check_aspatial_siri_inputs(inputs)
+sir_model_winter <- function(inputs) {
+  inputs <- check_aspatial_sir_inputs(inputs)
   list2env(inputs, environment())
   active_pops <- length(occupied_indices)
   season_length <- (365 - breeding_season_length)[occupied_indices]
@@ -248,7 +264,7 @@ siri_model_winter <- function(inputs) {
                               abundance_threshold = abundance_threshold,
                               carrying_capacity = carrying_capacity,
                               season_length = season_length,
-                              season = "non-breeding"), aspatial_siri)
+                              season = "non-breeding"), aspatial_sir)
 
   # Assign populations to occupied indices in segment_abundance
   for(i in seq_along(occupied_indices)) {
